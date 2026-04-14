@@ -1,0 +1,37 @@
+# Supabase config — AMI Colony
+
+[api]
+port = 54321
+schemas = ["public", "colony", "queen_mind", "logs"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[storage]
+file_size_limit = "50MiB"
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://ami-colony.vercel.app"]
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+
+[edge_runtime]
+policy = "oneshot"
+
+[functions.colony-cycle]
+verify_jwt = true
