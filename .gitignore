@@ -1,0 +1,43 @@
+# Environnement — JAMAIS committer
+.env
+.env.local
+.env.production
+.env*.local
+
+# Jamais dans ce repo
+*private*
+*lab*
+*_v3*
+*multicolony*
+*mere_nature*
+notes/
+experiment/
+
+# Dependencies
+node_modules/
+.next/
+out/
+
+# Supabase
+.supabase/
+supabase/.temp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Keys
+*.pem
+serviceAccountKey.json
+*api_keys*
+
+# Fichier clés API local
+api colonie ami.txt

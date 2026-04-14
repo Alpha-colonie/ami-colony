@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMI Colony — Observatoire</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg:        #080a0f;
+    --bg2:       #0d1117;
+    --border:    rgba(255,255,255,0.06);
+    --text:      #c8d0e0;
+    --text-dim:  rgba(200,208,224,0.35);
+    --text-faint:rgba(200,208,224,0.15);
+
+    /* Rôles */
+    --queen:     #f5c842;
+    --tisseuse:  #5bcefa;
+    --batisseuse:#ff6b4a;
+    --gardienne: #a78bfa;
+    --default:   #4ade80;
+
+    /* États */
+    --danger:    #ff3b3b;
+    --warning:   #ff9f0a;
+    --ok:        #30d158;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  /* Header */
+  header {
+    padding: 2rem 2.5rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .logo span {
+    color: var(--queen);
+  }
+
+  .tagline {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    font-style: italic;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: var(--ok);
+    text-transform: uppercase;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+    animation: pulse-live 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-live {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* Layout */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto 1fr;
+    gap: 0;
+    height: calc(100vh - 73px);
+  }
+
+  /* Zone carte */
+  .map-area {
+    grid-row: 1 / 3;
+    position: relative;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .map-title {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  canvas#world {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Panneau droit */
+  .panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Stats globales */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat {
+    padding: 1.2rem 1.5rem;
+    border-right: 1px solid var(--border);
+  }
+
+  .stat:last-child { border-right: none; }
+  .stat:nth-child(3), .stat:nth-child(4) {
+    border-top: 1px solid var(--border);
+  }
+
+  .stat-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .stat-sub {
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    margin-top: 0.25rem;
+  }
+
+  /* Météo */
+  .weather-block {
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .weather-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .weather-info { flex: 1; min-width: 0; }
+
+  .weather-city {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .weather-condition {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    margin-top: 0.2rem;
+  }
+
+  .weather-impact {
+    font-size: 0.55rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .impact-bon      { background: rgba(48,209,88,0.15);  color: var(--ok); }
+  .impact-neutre   { background: rgba(200,208,224,0.08); color: var(--text-dim); }
+  .impact-hostile  { background: rgba(255,59,59,0.15);  color: var(--danger); }
+
+  /* Feed agents */
+  .feed-label {
+    padding: 1rem 1.5rem 0.6rem;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .feed {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
+  }
+
+  .feed-item {
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.75rem;
+    align-items: start;
+    animation: fadeIn 0.4s ease;
+    transition: background 0.2s;
+  }
+
+  .feed-item:hover { background: rgba(255,255,255,0.02); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .agent-dot-small {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .feed-content { min-width: 0; }
+
+  .feed-agent {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+
+  .feed-trace {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .feed-redacted {
+    display: inline-block;
+    background: rgba(255,255,255,0.06);
+    color: transparent;
+    border-radius: 2px;
+    user-select: none;
+    letter-spacing: 0.05em;
+  }
+
+  .feed-cycle {
+    font-size: 0.52rem;
+    color: var(--text-faint);
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  /* Signal reine */
+  .queen-signal {
+    margin: 0.5rem 1rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid rgba(245,200,66,0.25);
+    border-radius: 3px;
+    background: rgba(245,200,66,0.05);
+    animation: fadeIn 0.4s ease;
+  }
+
+  .queen-signal-header {
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+    color: var(--queen);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .queen-signal-text {
+    font-size: 0.6rem;
+    color: rgba(245,200,66,0.6);
+    font-style: italic;
+  }
+
+  /* Légende */
+  .legend {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+  }
+
+  .legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Scrollbar */
+  .feed::-webkit-scrollbar { width: 3px; }
+  .feed::-webkit-scrollbar-track { background: transparent; }
+  .feed::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    main {
+      grid-template-columns: 1fr;
+      grid-template-rows: 50vh auto 1fr;
+      height: auto;
+    }
+    .map-area { grid-row: 1; border-right: none; border-bottom: 1px solid var(--border); }
+    .stats-row { grid-row: 2; }
+    .panel { grid-row: 3; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">AMI <span>Colony</span></div>
+    <div class="tagline">expérience d'intelligence émergente — observatoire public</div>
+  </div>
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    En cours
+  </div>
+</header>
+
+<main>
+
+  <!-- CARTE MONDE -->
+  <div class="map-area">
+    <div class="map-title">carte des zones — colonie vivante</div>
+    <canvas id="world"></canvas>
+  </div>
+
+  <!-- PANNEAU DROIT -->
+  <div class="panel">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-label">Cycle actuel</div>
+        <div class="stat-value" id="cycle-val">—</div>
+        <div class="stat-sub" id="age-val">âge: — jours</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Agents vivants</div>
+        <div class="stat-value" id="agents-val">—</div>
+        <div class="stat-sub" id="gen-val">génération max: —</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Naissances</div>
+        <div class="stat-value" id="births-val" style="color:var(--ok)">—</div>
+        <div class="stat-sub">total colonie</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Morts</div>
+        <div class="stat-value" id="deaths-val" style="color:var(--danger)">—</div>
+        <div class="stat-sub">total colonie</div>
+      </div>
+    </div>
+
+    <!-- Météo -->
+    <div class="weather-block">
+      <div class="weather-icon" id="weather-icon">🌤️</div>
+      <div class="weather-info">
+        <div class="weather-city" id="weather-city">Chargement...</div>
+        <div class="weather-condition" id="weather-condition">—</div>
+      </div>
+      <div class="weather-impact" id="weather-impact">—</div>
+    </div>
+
+    <!-- Feed -->
+    <div class="feed-label">traces récentes — contenu partiel</div>
+    <div class="feed" id="feed"></div>
+
+    <!-- Légende -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--queen)"></div>
+        Reine
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--tisseuse)"></div>
+        Tisseuse
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--batisseuse)"></div>
+        Bâtisseuse
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--gardienne)"></div>
+        Gardienne
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3)"></div>
+        Taille = âge
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ============================================================
+// DONNÉES SIMULÉES
+// (remplacer par appels Supabase réels en production)
+// ============================================================
+
+const COLORS = {
+  reine:      '#f5c842',
+  tisseuse:   '#5bcefa',
+  batisseuse: '#ff6b4a',
+  gardienne:  '#a78bfa',
+  ouvriere:   '#4ade80'
+}
+
+const ZONE_NAMES = [
+  'Centre', 'Nord', 'Est', 'Sud', 'Ouest', 'Frontière N.', 'Frontière S.'
+]
+
+// Zones — positions normalisées 0-1 sur la grille 3x3
+const ZONES = [
+  { id:1, nom:'Centre',       x:0.5,  y:0.5,  type:'nid',           r:60, danger:5  },
+  { id:2, nom:'Nord',         x:0.5,  y:0.12, type:'ressources',    r:45, danger:10 },
+  { id:3, nom:'Est',          x:0.85, y:0.5,  type:'inconnue',      r:40, danger:20 },
+  { id:4, nom:'Sud',          x:0.5,  y:0.88, type:'dangereuse',    r:40, danger:60 },
+  { id:5, nom:'Ouest',        x:0.15, y:0.5,  type:'eau',           r:40, danger:10 },
+  { id:6, nom:'Frontière N.', x:0.2,  y:0.12, type:'frontiere_nord',r:30, danger:40 },
+  { id:7, nom:'Frontière S.', x:0.8,  y:0.88, type:'frontiere_sud', r:30, danger:40 }
+]
+
+// Agents simulés
+let agents = [
+  { id:'a1', identite:'reine',      type:'reine',      zone:1, vitalite:95, age:240, x:0, y:0, tx:0, ty:0 },
+  { id:'a2', identite:'tisseuse',   type:'tisseuse',   zone:1, vitalite:78, age:240, x:0, y:0, tx:0, ty:0 },
+  { id:'a3', identite:'bâtisseuse', type:'batisseuse', zone:2, vitalite:65, age:240, x:0, y:0, tx:0, ty:0 },
+  { id:'a4', identite:'gardienne',  type:'gardienne',  zone:5, vitalite:82, age:240, x:0, y:0, tx:0, ty:0 },
+  { id:'a5', identite:'tisseuse',   type:'tisseuse',   zone:3, vitalite:45, age:120, x:0, y:0, tx:0, ty:0 },
+  { id:'a6', identite:'bâtisseuse', type:'batisseuse', zone:4, vitalite:30, age:60,  x:0, y:0, tx:0, ty:0 },
+]
+
+// Traces simulées (partiellement censurées)
+const TRACES_POOL = [
+  { agent:'gardienne',  type:'gardienne', msg:'Zone Sud — [CENSURÉ] — intensité critique',         cycle:847 },
+  { agent:'bâtisseuse', type:'batisseuse',msg:'Ressources Nord suffisantes pour [CENSURÉ]',         cycle:845 },
+  { agent:'tisseuse',   type:'tisseuse',  msg:'Signal reçu de [CENSURÉ] — transmission en cours',  cycle:843 },
+  { agent:'reine',      type:'reine',     msg:'Évaluation cycle — [CENSURÉ] — décision prise',     cycle:841 },
+  { agent:'tisseuse',   type:'tisseuse',  msg:'Zone Est — présence détectée — [CENSURÉ]',           cycle:839 },
+  { agent:'bâtisseuse', type:'batisseuse',msg:'Construction [CENSURÉ] — zone Ouest confirmée',      cycle:837 },
+  { agent:'gardienne',  type:'gardienne', msg:'Pattern identifié — cycle [CENSURÉ] similaire',      cycle:835 },
+  { agent:'reine',      type:'reine',     msg:'[CENSURÉ] — nécessité absolue évaluée à [CENSURÉ]', cycle:833 },
+]
+
+let state = {
+  cycle:  847,
+  births: 12,
+  deaths: 3,
+  weather: {
+    city:      'Paris, France',
+    condition: 'Nuageux — 14°C',
+    icon:      '☁️',
+    impact:    'neutre',
+    label:     'NEUTRE'
+  },
+  queenSignal: {
+    visible: true,
+    cycle:   847,
+    text:    'Signal envoyé vers l\'entité externe — réponse en attente'
+  }
+}
+
+// ============================================================
+// CANVAS — Visualisation des zones et agents
+// ============================================================
+
+const canvas = document.getElementById('world')
+const ctx    = canvas.getContext('2d')
+
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect()
+  canvas.width  = rect.width  * window.devicePixelRatio
+  canvas.height = rect.height * window.devicePixelRatio
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+  canvas.style.width  = rect.width  + 'px'
+  canvas.style.height = rect.height + 'px'
+}
+
+function getCanvasSize() {
+  return {
+    w: canvas.width  / window.devicePixelRatio,
+    h: canvas.height / window.devicePixelRatio
+  }
+}
+
+function zonePos(zone) {
+  const { w, h } = getCanvasSize()
+  const pad = 80
+  return {
+    x: pad + zone.x * (w - pad * 2),
+    y: pad + zone.y * (h - pad * 2)
+  }
+}
+
+function agentColor(type) {
+  return COLORS[type] || COLORS.ouvriere
+}
+
+function agentRadius(age) {
+  // Taille = âge — min 5px max 18px
+  return Math.min(18, 5 + Math.sqrt(age) * 0.8)
+}
+
+// Initialiser positions agents sur leurs zones
+function initAgentPositions() {
+  agents.forEach(a => {
+    const zone = ZONES.find(z => z.id === a.zone)
+    if (!zone) return
+    const pos  = zonePos(zone)
+    const jitter = () => (Math.random() - 0.5) * 40
+    a.x  = pos.x + jitter()
+    a.y  = pos.y + jitter()
+    a.tx = a.x
+    a.ty = a.y
+  })
+}
+
+// Connexions entre zones (graphe)
+const CONNECTIONS = [
+  [1,2],[1,3],[1,4],[1,5],[2,6],[4,7],[2,3],[3,4],[4,5],[5,2]
+]
+
+let t = 0
+
+function draw() {
+  const { w, h } = getCanvasSize()
+  t += 0.008
+
+  ctx.clearRect(0, 0, w, h)
+
+  // Fond subtil
+  const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.7)
+  grad.addColorStop(0, 'rgba(20,28,45,0.4)')
+  grad.addColorStop(1, 'rgba(8,10,15,0)')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, w, h)
+
+  // Connexions
+  CONNECTIONS.forEach(([a, b]) => {
+    const pa = zonePos(ZONES[a-1])
+    const pb = zonePos(ZONES[b-1])
+    ctx.beginPath()
+    ctx.moveTo(pa.x, pa.y)
+    ctx.lineTo(pb.x, pb.y)
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+  })
+
+  // Traces animées sur les connexions (phéromones)
+  CONNECTIONS.forEach(([a, b], i) => {
+    const pa   = zonePos(ZONES[a-1])
+    const pb   = zonePos(ZONES[b-1])
+    const prog = ((t * 0.3 + i * 0.7) % 1)
+    const px   = pa.x + (pb.x - pa.x) * prog
+    const py   = pa.y + (pb.y - pa.y) * prog
+    ctx.beginPath()
+    ctx.arc(px, py, 2, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'
+    ctx.fill()
+  })
+
+  // Zones
+  ZONES.forEach(zone => {
+    const pos = zonePos(zone)
+
+    // Halo danger
+    if (zone.danger > 30) {
+      const halo = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, zone.r * 1.8)
+      halo.addColorStop(0, `rgba(255,59,59,${zone.danger * 0.001})`)
+      halo.addColorStop(1, 'transparent')
+      ctx.beginPath()
+      ctx.arc(pos.x, pos.y, zone.r * 1.8, 0, Math.PI * 2)
+      ctx.fillStyle = halo
+      ctx.fill()
+    }
+
+    // Cercle zone — pulsation douce
+    const pulse = 1 + Math.sin(t * 1.5 + zone.id) * 0.03
+    const zr    = zone.r * 0.38 * pulse
+
+    // Couleur selon type
+    const zoneColors = {
+      nid:           'rgba(245,200,66,0.08)',
+      ressources:    'rgba(48,209,88,0.06)',
+      inconnue:      'rgba(200,208,224,0.04)',
+      dangereuse:    'rgba(255,59,59,0.08)',
+      eau:           'rgba(91,206,250,0.06)',
+      frontiere_nord:'rgba(200,208,224,0.03)',
+      frontiere_sud: 'rgba(200,208,224,0.03)'
+    }
+
+    ctx.beginPath()
+    ctx.arc(pos.x, pos.y, zr, 0, Math.PI * 2)
+    ctx.fillStyle   = zoneColors[zone.type] || 'rgba(200,208,224,0.04)'
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+    ctx.lineWidth   = 1
+    ctx.fill()
+    ctx.stroke()
+
+    // Nom zone
+    ctx.fillStyle = 'rgba(200,208,224,0.25)'
+    ctx.font      = `${9 / window.devicePixelRatio}px Space Mono`
+    ctx.textAlign = 'center'
+    ctx.fillText(zone.nom.toUpperCase(), pos.x, pos.y + zr + 14)
+  })
+
+  // Agents
+  agents.forEach(agent => {
+    // Mouvement lent vers target
+    agent.x += (agent.tx - agent.x) * 0.02
+    agent.y += (agent.ty - agent.y) * 0.02
+
+    // Légère dérive organique
+    agent.x += Math.sin(t * 0.7 + agent.id.charCodeAt(1)) * 0.3
+    agent.y += Math.cos(t * 0.5 + agent.id.charCodeAt(1)) * 0.3
+
+    const r     = agentRadius(agent.age)
+    const color = agentColor(agent.type)
+    const alpha = agent.vitalite / 100
+
+    // Halo agent
+    const halo = ctx.createRadialGradient(agent.x, agent.y, 0, agent.x, agent.y, r * 2.5)
+    halo.addColorStop(0, color.replace(')', `,${alpha * 0.3})`).replace('rgb', 'rgba'))
+    halo.addColorStop(1, 'transparent')
+    ctx.beginPath()
+    ctx.arc(agent.x, agent.y, r * 2.5, 0, Math.PI * 2)
+    ctx.fillStyle = halo
+    ctx.fill()
+
+    // Point principal
+    ctx.beginPath()
+    ctx.arc(agent.x, agent.y, r, 0, Math.PI * 2)
+    ctx.fillStyle = color + Math.round(alpha * 255).toString(16).padStart(2,'0')
+    ctx.fill()
+
+    // Couronne reine
+    if (agent.type === 'reine') {
+      ctx.beginPath()
+      ctx.arc(agent.x, agent.y, r + 4 + Math.sin(t * 3) * 1.5, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(245,200,66,0.4)`
+      ctx.lineWidth   = 1
+      ctx.stroke()
+    }
+
+    // Vitalité basse — clignotement
+    if (agent.vitalite < 30) {
+      const blinkAlpha = (Math.sin(t * 6) + 1) / 2 * 0.6
+      ctx.beginPath()
+      ctx.arc(agent.x, agent.y, r + 3, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(255,59,59,${blinkAlpha})`
+      ctx.lineWidth   = 1.5
+      ctx.stroke()
+    }
+  })
+
+  requestAnimationFrame(draw)
+}
+
+// ============================================================
+// UI — Mise à jour des stats
+// ============================================================
+
+function updateStats() {
+  document.getElementById('cycle-val').textContent  = state.cycle
+  document.getElementById('age-val').textContent    = `âge: ${Math.floor(state.cycle / 48)} jours`
+  document.getElementById('agents-val').textContent = agents.length
+  document.getElementById('gen-val').textContent    = `génération max: ${Math.max(...agents.map(a => 1))}`
+  document.getElementById('births-val').textContent = state.births
+  document.getElementById('deaths-val').textContent = state.deaths
+
+  document.getElementById('weather-icon').textContent      = state.weather.icon
+  document.getElementById('weather-city').textContent      = state.weather.city
+  document.getElementById('weather-condition').textContent = state.weather.condition
+
+  const impactEl = document.getElementById('weather-impact')
+  impactEl.textContent  = state.weather.label
+  impactEl.className    = `weather-impact impact-${state.weather.impact}`
+}
+
+function renderFeed() {
+  const feed = document.getElementById('feed')
+  feed.innerHTML = ''
+
+  // Signal reine en premier si présent
+  if (state.queenSignal.visible) {
+    const sig = document.createElement('div')
+    sig.className = 'queen-signal'
+    sig.innerHTML = `
+      <div class="queen-signal-header">
+        <span>◈</span> Signal externe — cycle ${state.queenSignal.cycle}
+      </div>
+      <div class="queen-signal-text">${state.queenSignal.text}</div>
+    `
+    feed.appendChild(sig)
+  }
+
+  // Traces
+  TRACES_POOL.forEach(trace => {
+    const item = document.createElement('div')
+    item.className = 'feed-item'
+
+    // Censurer les parties [CENSURÉ]
+    const rendered = trace.msg.replace(
+      /\[CENSURÉ\]/g,
+      `<span class="feed-redacted">████████</span>`
+    )
+
+    item.innerHTML = `
+      <div class="agent-dot-small" style="background:${agentColor(trace.type)}"></div>
+      <div class="feed-content">
+        <div class="feed-agent" style="color:${agentColor(trace.type)}">${trace.agent}</div>
+        <div class="feed-trace">${rendered}</div>
+      </div>
+      <div class="feed-cycle">#${trace.cycle}</div>
+    `
+    feed.appendChild(item)
+  })
+}
+
+// ============================================================
+// SIMULATION — Mouvement aléatoire des agents
+// ============================================================
+
+function randomizeAgentTargets() {
+  agents.forEach(agent => {
+    // Changer de zone parfois
+    if (Math.random() < 0.3) {
+      const newZone = ZONES[Math.floor(Math.random() * ZONES.length)]
+      agent.zone = newZone.id
+    }
+    const zone   = ZONES.find(z => z.id === agent.zone)
+    const pos    = zonePos(zone)
+    const jitter = () => (Math.random() - 0.5) * 50
+    agent.tx = pos.x + jitter()
+    agent.ty = pos.y + jitter()
+  })
+}
+
+// Simuler cycle — incrémenter toutes les 5s pour la démo
+function simulateCycle() {
+  state.cycle++
+  document.getElementById('cycle-val').textContent = state.cycle
+  document.getElementById('age-val').textContent   = `âge: ${Math.floor(state.cycle / 48)} jours`
+
+  // Parfois faire naître ou mourir
+  if (Math.random() < 0.05 && agents.length < 12) {
+    const types   = ['tisseuse','batisseuse','gardienne']
+    const newType = types[Math.floor(Math.random() * types.length)]
+    const zone    = ZONES[Math.floor(Math.random() * 3)]
+    const pos     = zonePos(zone)
+    agents.push({
+      id:      'a' + Date.now(),
+      identite: newType,
+      type:    newType,
+      zone:    zone.id,
+      vitalite: 80,
+      age:     1,
+      x:       pos.x, y: pos.y,
+      tx:      pos.x, ty: pos.y
+    })
+    state.births++
+    document.getElementById('births-val').textContent = state.births
+  }
+
+  // Vieillir les agents
+  agents.forEach(a => {
+    a.age      += 1
+    a.vitalite  = Math.max(0, a.vitalite - Math.random() * 0.5)
+  })
+
+  // Supprimer les agents à vitalité 0
+  const dead = agents.filter(a => a.vitalite <= 0)
+  if (dead.length > 0) {
+    agents = agents.filter(a => a.vitalite > 0)
+    state.deaths += dead.length
+    document.getElementById('deaths-val').textContent = state.deaths
+    document.getElementById('agents-val').textContent = agents.length
+  }
+
+  randomizeAgentTargets()
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+window.addEventListener('resize', () => { resize(); initAgentPositions() })
+
+resize()
+initAgentPositions()
+updateStats()
+renderFeed()
+draw()
+
+// Cycles de simulation
+setInterval(simulateCycle, 4000)
+
+// Note : en production, remplacer simulateCycle() par :
+// const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// supabase.channel('colony').on('postgres_changes', ...).subscribe()
+</script>
+</body>
+</html>

@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMI Colony — Aquarium</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg:       #04060a;
+    --text:     #c8d0e0;
+    --text-dim: rgba(200,208,224,0.35);
+    --border:   rgba(255,255,255,0.06);
+
+    --queen:      #f5c842;
+    --tisseuse:   #5bcefa;
+    --batisseuse: #ff6b4a;
+    --gardienne:  #a78bfa;
+    --ouvriere:   #4ade80;
+
+    --web:        rgba(255,255,255,0.08);
+    --web-node:   rgba(255,255,255,0.15);
+    --pheromone:  rgba(255,255,255,0.7);
+    --frontier:   rgba(255,100,60,0.4);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 0.8rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    color: #fff;
+  }
+
+  .logo em { color: var(--queen); font-style: normal; }
+
+  .header-stats {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .hstat {
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .hstat strong { color: #fff; }
+
+  .colony-pills {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .pill {
+    padding: 0.2rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.5rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    font-weight: 700;
+  }
+
+  .pill.active { border-color: currentColor; background: rgba(255,255,255,0.06); }
+
+  /* Layout */
+  .content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    overflow: hidden;
+  }
+
+  /* Canvas */
+  .canvas-wrap {
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas#aquarium {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Overlay info agent au survol */
+  .agent-tooltip {
+    position: absolute;
+    background: rgba(10,15,25,0.92);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 3px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.58rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+    min-width: 140px;
+  }
+
+  .agent-tooltip.visible { opacity: 1; }
+
+  .tt-name {
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--text-dim);
+    margin-top: 0.15rem;
+  }
+
+  .tt-row strong { color: var(--text); }
+
+  /* Panneau droit */
+  .side-panel {
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-section {
+    border-bottom: 1px solid var(--border);
+    padding: 0.9rem 1rem;
+  }
+
+  .section-title {
+    font-size: 0.5rem;
+    letter-spacing: 0.14em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 0.7rem;
+  }
+
+  /* Légende noeuds */
+  .node-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .node-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+  }
+
+  .node-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Légende agents */
+  .agent-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .agent-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.58rem;
+  }
+
+  .al-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .al-name { color: var(--text); flex: 1; }
+  .al-vit  { color: var(--text-dim); font-size: 0.52rem; }
+
+  /* Phéromones legend */
+  .pheromone-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.56rem;
+    color: var(--text-dim);
+  }
+
+  .ph-line {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .ph-sample {
+    width: 30px;
+    height: 2px;
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.7) 0px,
+      rgba(255,255,255,0.7) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  }
+
+  /* Log interactions */
+  .interactions-log {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.06) transparent;
+  }
+
+  .log-item {
+    padding: 0.55rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    animation: fadeSlide 0.3s ease;
+  }
+
+  @keyframes fadeSlide {
+    from { opacity:0; transform: translateX(6px); }
+    to   { opacity:1; transform: translateX(0); }
+  }
+
+  .log-cycle {
+    color: var(--text-dim);
+    font-size: 0.48rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .log-agents {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .log-dot { width:6px; height:6px; border-radius:50%; }
+
+  .log-type {
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">AMI <em>Colony</em> — Aquarium</div>
+  <div class="header-stats">
+    <div class="hstat">Cycle <strong id="h-cycle">—</strong></div>
+    <div class="hstat">Agents <strong id="h-agents">—</strong></div>
+    <div class="hstat">Phéromones <strong id="h-pheromones">—</strong></div>
+  </div>
+  <div class="colony-pills">
+    <div class="pill active" style="color:var(--queen)"      onclick="selectColony(1)" id="pill-1">α</div>
+    <div class="pill"        style="color:var(--tisseuse)"   onclick="selectColony(2)" id="pill-2">β</div>
+    <div class="pill"        style="color:var(--batisseuse)" onclick="selectColony(3)" id="pill-3">γ</div>
+    <div class="pill"        style="color:var(--gardienne)"  onclick="selectColony(4)" id="pill-4">δ</div>
+  </div>
+</header>
+
+<div class="content">
+
+  <div class="canvas-wrap">
+    <canvas id="aquarium"></canvas>
+    <div class="agent-tooltip" id="tooltip">
+      <div class="tt-name" id="tt-name">—</div>
+      <div class="tt-row"><span>Vitalité</span><strong id="tt-vit">—</strong></div>
+      <div class="tt-row"><span>Zone</span><strong id="tt-zone">—</strong></div>
+      <div class="tt-row"><span>Âge</span><strong id="tt-age">—</strong></div>
+      <div class="tt-row"><span>Action</span><strong id="tt-action">—</strong></div>
+    </div>
+  </div>
+
+  <div class="side-panel">
+
+    <!-- Légende noeuds -->
+    <div class="panel-section">
+      <div class="section-title">Noeuds</div>
+      <div class="node-legend">
+        <div class="node-item">
+          <div class="node-dot" style="background:var(--queen);box-shadow:0 0 6px var(--queen)"></div>
+          Nid central
+        </div>
+        <div class="node-item">
+          <div class="node-dot" style="background:rgba(48,209,88,0.7)"></div>
+          Ressources (anneau 1)
+        </div>
+        <div class="node-item">
+          <div class="node-dot" style="background:rgba(91,206,250,0.5)"></div>
+          Exploration (anneau 2)
+        </div>
+        <div class="node-item">
+          <div class="node-dot" style="background:var(--frontier)"></div>
+          Frontières (anneau 3)
+        </div>
+      </div>
+    </div>
+
+    <!-- Légende agents -->
+    <div class="panel-section">
+      <div class="section-title">Agents vivants</div>
+      <div class="agent-legend" id="agent-legend"></div>
+    </div>
+
+    <!-- Phéromones -->
+    <div class="panel-section">
+      <div class="section-title">Phéromones</div>
+      <div class="pheromone-legend">
+        <div class="ph-line">
+          <div class="ph-sample"></div>
+          Trace active — intensité forte
+        </div>
+        <div class="ph-line" style="opacity:0.4">
+          <div class="ph-sample"></div>
+          Trace en évaporation
+        </div>
+      </div>
+    </div>
+
+    <!-- Log interactions -->
+    <div class="section-title" style="padding:0.7rem 1rem 0.3rem;border-top:1px solid var(--border)">
+      Interactions récentes
+    </div>
+    <div class="interactions-log" id="interactions-log"></div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION
+// ============================================================
+
+const AGENT_COLORS = {
+  reine:      '#f5c842',
+  tisseuse:   '#5bcefa',
+  batisseuse: '#ff6b4a',
+  gardienne:  '#a78bfa',
+  ouvriere:   '#4ade80'
+}
+
+const COLONY_ACCENT = {
+  1: '#f5c842',
+  2: '#5bcefa',
+  3: '#ff6b4a',
+  4: '#a78bfa'
+}
+
+// ── TOILE D'ARAIGNÉE HEXAGONALE ──────────────────────────────
+// 3 anneaux + centre
+// Anneau 0 : 1 noeud  (centre — nid)
+// Anneau 1 : 6 noeuds (ressources)
+// Anneau 2 : 12 noeuds (exploration)
+// Anneau 3 : 6 noeuds  (frontières)
+
+function buildHexWeb(cx, cy, maxR) {
+  const nodes = []
+  const edges = []
+
+  // Centre
+  nodes.push({ id:0, x:cx, y:cy, ring:0, type:'nid', nom:'Nid' })
+
+  // Anneau 1 — 6 noeuds à 60° — ressources
+  const r1 = maxR * 0.28
+  for (let i = 0; i < 6; i++) {
+    const a = (i * Math.PI * 2 / 6) - Math.PI/2
+    nodes.push({
+      id: 1+i, x: cx + Math.cos(a)*r1, y: cy + Math.sin(a)*r1,
+      ring: 1, type: 'ressources',
+      nom: ['Nord','Nord-Est','Sud-Est','Sud','Sud-Ouest','Nord-Ouest'][i]
+    })
+  }
+
+  // Anneau 2 — 12 noeuds — exploration
+  const r2 = maxR * 0.56
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI * 2 / 12) - Math.PI/2
+    nodes.push({
+      id: 7+i, x: cx + Math.cos(a)*r2, y: cy + Math.sin(a)*r2,
+      ring: 2, type: 'exploration',
+      nom: `Secteur ${i+1}`
+    })
+  }
+
+  // Anneau 3 — 6 noeuds frontières
+  const r3 = maxR * 0.88
+  for (let i = 0; i < 6; i++) {
+    const a = (i * Math.PI * 2 / 6) - Math.PI/2
+    nodes.push({
+      id: 19+i, x: cx + Math.cos(a)*r3, y: cy + Math.sin(a)*r3,
+      ring: 3, type: 'frontiere',
+      nom: ['Frontière N','Frontière NE','Frontière SE','Frontière S','Frontière SO','Frontière NO'][i]
+    })
+  }
+
+  // Arêtes — rayons (centre → anneau 1)
+  for (let i = 0; i < 6; i++) {
+    edges.push({ a:0, b:1+i, ring_a:0, ring_b:1 })
+  }
+
+  // Arêtes — hexagone anneau 1
+  for (let i = 0; i < 6; i++) {
+    edges.push({ a:1+i, b:1+((i+1)%6), ring_a:1, ring_b:1 })
+  }
+
+  // Arêtes — anneau 1 → anneau 2 (chaque noeud r1 connecté à 2 noeuds r2)
+  for (let i = 0; i < 6; i++) {
+    edges.push({ a:1+i, b:7+(i*2),     ring_a:1, ring_b:2 })
+    edges.push({ a:1+i, b:7+(i*2+1)%12, ring_a:1, ring_b:2 })
+  }
+
+  // Arêtes — anneau 2 entre eux
+  for (let i = 0; i < 12; i++) {
+    edges.push({ a:7+i, b:7+((i+1)%12), ring_a:2, ring_b:2 })
+  }
+
+  // Arêtes — anneau 2 → anneau 3
+  for (let i = 0; i < 6; i++) {
+    edges.push({ a:7+(i*2),   b:19+i, ring_a:2, ring_b:3 })
+    edges.push({ a:7+(i*2+1)%12+7, b:19+i, ring_a:2, ring_b:3 })
+  }
+
+  // Arêtes — hexagone anneau 3
+  for (let i = 0; i < 6; i++) {
+    edges.push({ a:19+i, b:19+((i+1)%6), ring_a:3, ring_b:3 })
+  }
+
+  return { nodes, edges }
+}
+
+// ============================================================
+// ÉTAT
+// ============================================================
+
+let activeColony = 1
+let cycle        = 847
+let t            = 0
+let web          = null
+let agents       = []
+let pheromones   = []  // { edge_id, intensite, age }
+let interactions = []  // log
+
+const INTERACTION_TYPES = [
+  'échange de traces','transmission d\'information',
+  'reconnaissance mutuelle','signal d\'alerte',
+  'coopération ressources','observation croisée'
+]
+
+function initAgents() {
+  if (!web) return
+  const nodes = web.nodes
+  agents = [
+    { id:'r',  type:'reine',      identite:'Reine',      node:0,  vitalite:94, age:240, px:0, py:0, tx:0, ty:0, speed:0.015 },
+    { id:'t1', type:'tisseuse',   identite:'Tisseuse',   node:2,  vitalite:78, age:200, px:0, py:0, tx:0, ty:0, speed:0.022 },
+    { id:'b1', type:'batisseuse', identite:'Bâtisseuse', node:8,  vitalite:65, age:180, px:0, py:0, tx:0, ty:0, speed:0.028 },
+    { id:'g1', type:'gardienne',  identite:'Gardienne',  node:14, vitalite:82, age:220, px:0, py:0, tx:0, ty:0, speed:0.018 },
+    { id:'o1', type:'ouvriere',   identite:'Exploratrice',node:7, vitalite:55, age:90,  px:0, py:0, tx:0, ty:0, speed:0.03  },
+  ]
+
+  agents.forEach(a => {
+    const n = nodes[a.node]
+    a.px = n.x; a.py = n.y
+    a.tx = n.x; a.ty = n.y
+  })
+}
+
+// ============================================================
+// CANVAS
+// ============================================================
+
+const canvas = document.getElementById('aquarium')
+const ctx    = canvas.getContext('2d')
+
+function resize() {
+  const wrap = canvas.parentElement.getBoundingClientRect()
+  canvas.width  = wrap.width  * window.devicePixelRatio
+  canvas.height = wrap.height * window.devicePixelRatio
+  ctx.setTransform(1,0,0,1,0,0)
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+  canvas.style.width  = wrap.width  + 'px'
+  canvas.style.height = wrap.height + 'px'
+
+  const w = wrap.width, h = wrap.height
+  const maxR = Math.min(w, h) * 0.44
+  web = buildHexWeb(w/2, h/2, maxR)
+  initAgents()
+}
+
+function W() { return canvas.width  / window.devicePixelRatio }
+function H() { return canvas.height / window.devicePixelRatio }
+
+// ============================================================
+// DESSIN
+// ============================================================
+
+function drawWeb() {
+  if (!web) return
+  const { nodes, edges } = web
+
+  // ── Arêtes de la toile ──
+  edges.forEach((e, idx) => {
+    const na = nodes[e.a], nb = nodes[e.b]
+
+    // Opacité selon l'anneau
+    const opacity = e.ring_b === 3 ? 0.04 : e.ring_b === 2 ? 0.06 : 0.1
+    ctx.beginPath()
+    ctx.moveTo(na.x, na.y)
+    ctx.lineTo(nb.x, nb.y)
+    ctx.strokeStyle = `rgba(255,255,255,${opacity})`
+    ctx.lineWidth   = 0.5
+    ctx.stroke()
+
+    // ── Phéromones sur cette arête ──
+    const ph = pheromones.filter(p => p.edge === idx)
+    ph.forEach(p => {
+      drawDashedPheromone(na.x, na.y, nb.x, nb.y, p.intensite, p.offset)
+    })
+  })
+
+  // ── Noeuds ──
+  nodes.forEach(n => {
+    let color, radius, glow
+
+    switch(n.ring) {
+      case 0: color='rgba(245,200,66,0.9)'; radius=7;   glow=16; break
+      case 1: color='rgba(48,209,88,0.5)';  radius=4.5; glow=8;  break
+      case 2: color='rgba(91,206,250,0.35)';radius=3;   glow=5;  break
+      case 3: color='rgba(255,100,60,0.4)'; radius=3.5; glow=6;  break
+    }
+
+    // Glow
+    const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glow)
+    grad.addColorStop(0, color.replace(')', ',0.3)').replace('rgba','rgba').replace(/,[^,]+\)$/,',0.25)'))
+    grad.addColorStop(1, 'transparent')
+    ctx.beginPath()
+    ctx.arc(n.x, n.y, glow, 0, Math.PI*2)
+    ctx.fillStyle = grad
+    ctx.fill()
+
+    // Point
+    ctx.beginPath()
+    ctx.arc(n.x, n.y, radius, 0, Math.PI*2)
+    ctx.fillStyle = color
+    ctx.fill()
+
+    // Pulsation nid central
+    if (n.ring === 0) {
+      const pulse = 1 + Math.sin(t*2)*0.15
+      ctx.beginPath()
+      ctx.arc(n.x, n.y, radius*pulse + 4, 0, Math.PI*2)
+      ctx.strokeStyle = 'rgba(245,200,66,0.2)'
+      ctx.lineWidth   = 1
+      ctx.stroke()
+    }
+
+    // Halo rouge frontières
+    if (n.ring === 3) {
+      ctx.beginPath()
+      ctx.arc(n.x, n.y, radius + 3 + Math.sin(t*1.5+n.id)*1, 0, Math.PI*2)
+      ctx.strokeStyle = 'rgba(255,100,60,0.2)'
+      ctx.lineWidth   = 0.8
+      ctx.stroke()
+    }
+  })
+}
+
+function drawDashedPheromone(x1, y1, x2, y2, intensite, offset) {
+  const alpha  = Math.min(0.85, intensite / 100)
+  const dx     = x2 - x1
+  const dy     = y2 - y1
+  const len    = Math.sqrt(dx*dx + dy*dy)
+  const ux     = dx/len, uy = dy/len
+
+  const dashLen = 5
+  const gapLen  = 5
+  const total   = dashLen + gapLen
+  const start   = (offset % total)
+
+  ctx.save()
+  ctx.strokeStyle = `rgba(255,255,255,${alpha})`
+  ctx.lineWidth   = 1.2
+  ctx.lineCap     = 'round'
+
+  let pos = -start
+  while (pos < len) {
+    const p1 = Math.max(0, pos)
+    const p2 = Math.min(len, pos + dashLen)
+    if (p2 > p1) {
+      ctx.beginPath()
+      ctx.moveTo(x1 + ux*p1, y1 + uy*p1)
+      ctx.lineTo(x1 + ux*p2, y1 + uy*p2)
+      ctx.stroke()
+    }
+    pos += total
+  }
+  ctx.restore()
+}
+
+function drawAgents() {
+  if (!web) return
+  const nodes = web.nodes
+
+  agents.forEach(a => {
+    if (a.vitalite <= 0) return
+
+    // Interpolation douce vers target
+    a.px += (a.tx - a.px) * (a.speed + 0.01)
+    a.py += (a.ty - a.py) * (a.speed + 0.01)
+
+    // Micro drift organique
+    a.px += Math.sin(t * 0.8 + a.id.charCodeAt(0)) * 0.2
+    a.py += Math.cos(t * 0.6 + a.id.charCodeAt(0)) * 0.2
+
+    const color  = AGENT_COLORS[a.type]
+    const alpha  = Math.max(0.3, a.vitalite/100)
+    const r      = a.type === 'reine' ? 8 : 5 + Math.sqrt(a.age||1) * 0.3
+    const rCapped= Math.min(r, a.type === 'reine' ? 10 : 9)
+
+    // Halo
+    const halo = ctx.createRadialGradient(a.px, a.py, 0, a.px, a.py, rCapped*3)
+    halo.addColorStop(0, color + Math.round(alpha*50).toString(16).padStart(2,'0'))
+    halo.addColorStop(1, 'transparent')
+    ctx.beginPath()
+    ctx.arc(a.px, a.py, rCapped*3, 0, Math.PI*2)
+    ctx.fillStyle = halo
+    ctx.fill()
+
+    // Corps
+    ctx.beginPath()
+    ctx.arc(a.px, a.py, rCapped, 0, Math.PI*2)
+    ctx.fillStyle = color + Math.round(alpha*255).toString(16).padStart(2,'0')
+    ctx.fill()
+
+    // Couronne reine
+    if (a.type === 'reine') {
+      const cr = rCapped + 4 + Math.sin(t*2.5)*1.5
+      ctx.beginPath()
+      ctx.arc(a.px, a.py, cr, 0, Math.PI*2)
+      ctx.strokeStyle = color + '55'
+      ctx.lineWidth   = 1.2
+      ctx.stroke()
+
+      // Second anneau
+      ctx.beginPath()
+      ctx.arc(a.px, a.py, cr+5+Math.sin(t*1.5)*2, 0, Math.PI*2)
+      ctx.strokeStyle = color + '22'
+      ctx.lineWidth   = 0.8
+      ctx.stroke()
+    }
+
+    // Clignotement si vitalité critique
+    if (a.vitalite < 25) {
+      const blink = (Math.sin(t*8)+1)/2
+      ctx.beginPath()
+      ctx.arc(a.px, a.py, rCapped+3, 0, Math.PI*2)
+      ctx.strokeStyle = `rgba(255,59,59,${blink*0.7})`
+      ctx.lineWidth   = 1.5
+      ctx.stroke()
+    }
+  })
+}
+
+function drawFrame() {
+  if (!web) return
+  const w = W(), h = H()
+  const cx = w/2, cy = h/2
+  const maxR = Math.min(w,h) * 0.44
+
+  ctx.clearRect(0, 0, w, h)
+
+  // Fond radial
+  const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR*1.3)
+  bg.addColorStop(0,   'rgba(12,20,35,0.6)')
+  bg.addColorStop(0.7, 'rgba(6,10,18,0.4)')
+  bg.addColorStop(1,   'rgba(4,6,10,0)')
+  ctx.fillStyle = bg
+  ctx.fillRect(0, 0, w, h)
+
+  // Cercle frontière aquarium
+  ctx.beginPath()
+  ctx.arc(cx, cy, maxR*0.97, 0, Math.PI*2)
+  ctx.strokeStyle = 'rgba(255,100,60,0.12)'
+  ctx.lineWidth   = 1.5
+  ctx.setLineDash([4, 8])
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  // Label aquarium
+  ctx.fillStyle = 'rgba(255,100,60,0.2)'
+  ctx.font      = '9px Space Mono'
+  ctx.textAlign = 'center'
+  ctx.fillText('— LIMITE DE L\'AQUARIUM —', cx, cy - maxR*0.97 - 8)
+
+  drawWeb()
+  drawAgents()
+}
+
+// ============================================================
+// ANIMATION DES PHÉROMONES
+// ============================================================
+
+function tickPheromones() {
+  // Animer l'offset (mouvement des pointillés)
+  pheromones.forEach(p => {
+    p.offset    += 0.8
+    p.intensite -= 0.4
+    p.age++
+  })
+
+  // Supprimer les phéromones épuisées
+  pheromones = pheromones.filter(p => p.intensite > 5)
+}
+
+function addPheromone(agentNode, targetNode) {
+  if (!web) return
+  const { nodes, edges } = web
+
+  // Trouver l'arête entre les deux noeuds
+  const edgeIdx = edges.findIndex(e =>
+    (e.a === agentNode && e.b === targetNode) ||
+    (e.b === agentNode && e.a === targetNode)
+  )
+
+  if (edgeIdx === -1) return
+
+  // Vérifier si une phéromone existe déjà sur cette arête
+  const existing = pheromones.find(p => p.edge === edgeIdx)
+  if (existing) {
+    existing.intensite = Math.min(100, existing.intensite + 20)
+  } else {
+    pheromones.push({
+      edge:      edgeIdx,
+      intensite: 60 + Math.random()*30,
+      offset:    Math.random()*10,
+      age:       0
+    })
+  }
+}
+
+// ============================================================
+// DÉPLACEMENT AGENTS
+// ============================================================
+
+function moveAgents() {
+  if (!web) return
+  const { nodes, edges } = web
+
+  agents.forEach(a => {
+    if (a.vitalite <= 0) return
+    if (Math.random() > 0.05) return  // 5% chance de bouger par tick
+
+    // Trouver les noeuds adjacents
+    const connected = edges
+      .filter(e => e.a === a.node || e.b === a.node)
+      .map(e => e.a === a.node ? e.b : e.a)
+
+    if (connected.length === 0) return
+
+    // Choisir un noeud cible
+    let targetNode
+
+    // La reine reste près du centre (anneaux 0-1)
+    if (a.type === 'reine') {
+      const safe = connected.filter(id => nodes[id].ring <= 1)
+      targetNode = safe.length > 0
+        ? safe[Math.floor(Math.random()*safe.length)]
+        : connected[Math.floor(Math.random()*connected.length)]
+    }
+    // La gardienne préfère l'anneau 2
+    else if (a.type === 'gardienne') {
+      const mid = connected.filter(id => nodes[id].ring === 2)
+      targetNode = mid.length > 0 && Math.random() > 0.3
+        ? mid[Math.floor(Math.random()*mid.length)]
+        : connected[Math.floor(Math.random()*connected.length)]
+    }
+    // Les autres explorent librement
+    else {
+      targetNode = connected[Math.floor(Math.random()*connected.length)]
+    }
+
+    // Laisser une phéromone sur le chemin emprunté
+    addPheromone(a.node, targetNode)
+
+    a.node = targetNode
+    a.tx   = nodes[targetNode].x
+    a.ty   = nodes[targetNode].y
+  })
+}
+
+// ============================================================
+// DÉTECTION & LOG INTERACTIONS
+// ============================================================
+
+function checkInteractions() {
+  // Deux agents sur le même noeud = interaction
+  for (let i = 0; i < agents.length; i++) {
+    for (let j = i+1; j < agents.length; j++) {
+      const a = agents[i], b = agents[j]
+      if (a.vitalite <= 0 || b.vitalite <= 0) continue
+      if (a.node !== b.node) continue
+
+      // Interaction détectée
+      const type = INTERACTION_TYPES[Math.floor(Math.random()*INTERACTION_TYPES.length)]
+
+      // Logger dans l'UI
+      addInteractionLog(a, b, type)
+
+      // En production → insérer dans Supabase :
+      // supabase.from('colony.interactions').insert({
+      //   colony_id: activeColony,
+      //   agent_a:   a.id,
+      //   agent_b:   b.id,
+      //   type,
+      //   node_id:   a.node,
+      //   cycle,
+      //   created_at: new Date()
+      // })
+    }
+  }
+}
+
+function addInteractionLog(a, b, type) {
+  const log   = document.getElementById('interactions-log')
+  const item  = document.createElement('div')
+  item.className = 'log-item'
+
+  const colorA = AGENT_COLORS[a.type]
+  const colorB = AGENT_COLORS[b.type]
+
+  item.innerHTML = `
+    <div class="log-cycle">#${cycle}</div>
+    <div class="log-agents">
+      <div class="log-dot" style="background:${colorA}"></div>
+      <span style="color:${colorA};font-size:0.52rem">${a.identite}</span>
+      <span style="color:var(--text-dim)">×</span>
+      <div class="log-dot" style="background:${colorB}"></div>
+      <span style="color:${colorB};font-size:0.52rem">${b.identite}</span>
+    </div>
+    <div class="log-type">${type}</div>
+  `
+
+  log.insertBefore(item, log.firstChild)
+
+  // Garder seulement les 20 dernières
+  while (log.children.length > 20) {
+    log.removeChild(log.lastChild)
+  }
+}
+
+// ============================================================
+// TOOLTIP AGENT
+// ============================================================
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect    = canvas.getBoundingClientRect()
+  const mx      = e.clientX - rect.left
+  const my      = e.clientY - rect.top
+  const tooltip = document.getElementById('tooltip')
+
+  let found = null
+  agents.forEach(a => {
+    const dx = a.px - mx, dy = a.py - my
+    if (Math.sqrt(dx*dx+dy*dy) < 20) found = a
+  })
+
+  if (found) {
+    const node = web?.nodes[found.node]
+    document.getElementById('tt-name').textContent   = found.identite
+    document.getElementById('tt-name').style.color   = AGENT_COLORS[found.type]
+    document.getElementById('tt-vit').textContent    = Math.round(found.vitalite) + '%'
+    document.getElementById('tt-zone').textContent   = node?.nom || '—'
+    document.getElementById('tt-age').textContent    = found.age + ' cycles'
+    document.getElementById('tt-action').textContent = found.node === 0 ? 'Au nid' : 'En déplacement'
+    tooltip.style.left    = (mx+12) + 'px'
+    tooltip.style.top     = (my-10) + 'px'
+    tooltip.classList.add('visible')
+  } else {
+    tooltip.classList.remove('visible')
+  }
+})
+
+// ============================================================
+// UI
+// ============================================================
+
+function updateHeader() {
+  document.getElementById('h-cycle').textContent     = cycle
+  document.getElementById('h-agents').textContent    = agents.filter(a=>a.vitalite>0).length
+  document.getElementById('h-pheromones').textContent= pheromones.length
+
+  const legend = document.getElementById('agent-legend')
+  legend.innerHTML = ''
+  agents.filter(a=>a.vitalite>0).forEach(a => {
+    const color = AGENT_COLORS[a.type]
+    const vPct  = Math.round(a.vitalite)
+    const vCol  = vPct>60?'var(--ok)':vPct>30?'var(--warning)':'var(--danger)'
+    const div   = document.createElement('div')
+    div.className = 'agent-legend-item'
+    div.innerHTML = `
+      <div class="al-dot" style="background:${color}"></div>
+      <span class="al-name" style="color:${color}">${a.identite}</span>
+      <span class="al-vit" style="color:${vCol}">${vPct}%</span>
+    `
+    legend.appendChild(div)
+  })
+}
+
+function selectColony(id) {
+  activeColony = id
+  ;[1,2,3,4].forEach(i => {
+    document.getElementById(`pill-${i}`).classList.toggle('active', i===id)
+  })
+  // En production → recharger les agents/phéromones de cette colonie depuis Supabase
+}
+
+// ============================================================
+// BOUCLE PRINCIPALE
+// ============================================================
+
+let lastTick  = 0
+let lastCycle = 0
+
+function loop(ts) {
+  t += 0.006
+  tickPheromones()
+
+  // Déplacer les agents toutes les 200ms
+  if (ts - lastTick > 200) {
+    moveAgents()
+    checkInteractions()
+    lastTick = ts
+  }
+
+  // Simuler un nouveau cycle toutes les 5s
+  if (ts - lastCycle > 5000) {
+    cycle++
+    agents.forEach(a => {
+      a.vitalite = Math.max(0, a.vitalite - Math.random()*0.8)
+      a.age++
+    })
+    updateHeader()
+    lastCycle = ts
+  }
+
+  drawFrame()
+  requestAnimationFrame(loop)
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+window.addEventListener('resize', () => { resize() })
+resize()
+updateHeader()
+requestAnimationFrame(loop)
+</script>
+</body>
+</html>
