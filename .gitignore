@@ -6,12 +6,19 @@
 
 # Jamais dans ce repo
 *private*
-*lab*
 *_v3*
 *multicolony*
 *mere_nature*
 notes/
 experiment/
+
+# Exclure les fichiers *lab* sauf les routes dashboard et migrations
+*lab*
+!dashboard/app/lab/
+!dashboard/app/lab/**
+!dashboard/app/api/
+!dashboard/app/api/**
+!supabase/migrations/*_lab_views.sql
 
 # Dependencies
 node_modules/
