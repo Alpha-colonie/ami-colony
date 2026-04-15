@@ -100,46 +100,47 @@ export default function AquariumPage() {
       {/* Header */}
       <header style={{
         padding: '0.8rem 1.5rem',
-        borderBottom: '1px solid var(--border)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexShrink: 0,
+        background: '#0a0d14',
       }}>
         <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.15em', color: '#fff' }}>
-          AMI <span style={{ color: '#f5c842' }}>Colony</span> — Aquarium
+          AMI <span style={{ color: '#f5c842' }}>Colony</span>
+          <span style={{ fontSize: '0.6rem', color: 'rgba(200,208,224,0.5)', marginLeft: '0.6rem', fontFamily: 'Space Mono, monospace', fontWeight: 400, letterSpacing: '0.08em' }}>— Aquarium</span>
         </div>
 
         <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.58rem', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
-            Cycle <strong style={{ color: '#fff' }}>{cycle || '—'}</strong>
-          </span>
-          <span style={{ fontSize: '0.58rem', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
-            Agents <strong style={{ color: '#fff' }}>{agentsAlive.length || '—'}</strong>
-          </span>
-          <span style={{ fontSize: '0.58rem', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
-            Traces <strong style={{ color: '#fff' }}>{traces.length || '—'}</strong>
-          </span>
+          {[
+            { label: 'Cycle', value: cycle || '—' },
+            { label: 'Agents', value: agentsAlive.length || '—' },
+            { label: 'Traces', value: traces.length || '—' },
+          ].map(s => (
+            <span key={s.label} style={{ fontSize: '0.6rem', color: 'rgba(200,208,224,0.55)', letterSpacing: '0.08em' }}>
+              {s.label} <strong style={{ color: '#fff', fontSize: '0.7rem' }}>{s.value}</strong>
+            </span>
+          ))}
         </div>
 
         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-          {/* Only colony Alpha is public */}
           <div style={{
-            padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.5rem',
-            letterSpacing: '0.1em', fontWeight: 700, border: '1px solid #f5c842',
-            background: 'rgba(255,255,255,0.06)', color: '#f5c842',
+            padding: '0.25rem 0.7rem', borderRadius: '10px', fontSize: '0.55rem',
+            letterSpacing: '0.12em', fontWeight: 700, border: '1px solid #f5c842',
+            background: 'rgba(245,200,66,0.12)', color: '#f5c842',
           }}>α</div>
           {['β','γ','δ'].map(l => (
-            <div key={l} title="Données privées" style={{
-              padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.5rem',
-              letterSpacing: '0.1em', fontWeight: 700, border: '1px solid transparent',
-              color: 'var(--text-faint)', cursor: 'not-allowed',
+            <div key={l} title="Accès /lab" style={{
+              padding: '0.25rem 0.7rem', borderRadius: '10px', fontSize: '0.55rem',
+              letterSpacing: '0.12em', fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(200,208,224,0.25)', cursor: 'not-allowed',
             }}>{l}</div>
           ))}
           <Link href="/" style={{
-            marginLeft: '1rem',
-            fontSize: '0.58rem', color: 'var(--text-dim)',
+            marginLeft: '1rem', fontSize: '0.58rem', color: 'rgba(200,208,224,0.55)',
             textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase',
+            transition: 'color 0.2s',
           }}>
             ← Observatoire
           </Link>
@@ -185,18 +186,18 @@ export default function AquariumPage() {
         </div>
 
         {/* Side panel */}
-        <div style={{ borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0a0d14' }}>
 
           {/* Node legend */}
-          <div style={{ borderBottom: '1px solid var(--border)', padding: '0.9rem 1rem' }}>
-            <div style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '0.7rem' }}>Noeuds</div>
+          <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '1rem 1.2rem' }}>
+            <div style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: 'rgba(200,208,224,0.6)', textTransform: 'uppercase', marginBottom: '0.8rem', fontWeight: 700 }}>Noeuds</div>
             {[
-              { color: '#f5c842', shadow: '0 0 6px #f5c842', label: 'Nid central' },
-              { color: 'rgba(48,209,88,0.7)',  label: 'Ressources (anneau 1)' },
-              { color: 'rgba(91,206,250,0.5)', label: 'Exploration (anneau 2)' },
-              { color: 'rgba(255,100,60,0.4)', label: 'Frontières (anneau 3)' },
+              { color: '#f5c842', shadow: '0 0 8px rgba(245,200,66,0.6)', label: 'Nid central' },
+              { color: '#30d158',  shadow: 'none', label: 'Ressources (anneau 1)' },
+              { color: '#5bcefa', shadow: 'none', label: 'Exploration (anneau 2)' },
+              { color: '#ff6b4a', shadow: 'none', label: 'Frontières (anneau 3)' },
             ].map(n => (
-              <div key={n.label} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.58rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+              <div key={n.label} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', fontSize: '0.6rem', color: '#c8d0e0', marginBottom: '0.55rem' }}>
                 <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: n.color, boxShadow: n.shadow, flexShrink: 0 }} />
                 {n.label}
               </div>
@@ -204,58 +205,59 @@ export default function AquariumPage() {
           </div>
 
           {/* Agents list */}
-          <div style={{ borderBottom: '1px solid var(--border)', padding: '0.9rem 1rem' }}>
-            <div style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '0.7rem' }}>Agents vivants</div>
+          <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '1rem 1.2rem' }}>
+            <div style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: 'rgba(200,208,224,0.6)', textTransform: 'uppercase', marginBottom: '0.8rem', fontWeight: 700 }}>Agents vivants</div>
             {agentsAlive.map(a => (
-              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.58rem', marginBottom: '0.45rem' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: COLORS[a.type] || '#4ade80', flexShrink: 0 }} />
-                <span style={{ color: 'var(--text)', flex: 1 }}>{a.identite}</span>
-                <span style={{ color: 'var(--text-dim)', fontSize: '0.52rem' }}>{a.vitalite}%</span>
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.6rem', marginBottom: '0.5rem' }}>
+                <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: COLORS[a.type] || '#4ade80', flexShrink: 0, boxShadow: `0 0 6px ${COLORS[a.type] || '#4ade80'}66` }} />
+                <span style={{ color: '#e2e8f0', flex: 1, fontWeight: 500 }}>{a.identite}</span>
+                <span style={{
+                  color: a.vitalite < 30 ? '#ff3b3b' : a.vitalite < 60 ? '#ff9f0a' : '#30d158',
+                  fontSize: '0.58rem', fontWeight: 700,
+                }}>{a.vitalite}%</span>
               </div>
             ))}
             {agentsAlive.length === 0 && (
-              <div style={{ fontSize: '0.55rem', color: 'var(--text-faint)', fontStyle: 'italic' }}>En attente…</div>
+              <div style={{ fontSize: '0.58rem', color: 'rgba(200,208,224,0.35)', fontStyle: 'italic' }}>En attente…</div>
             )}
           </div>
 
           {/* Pheromone legend */}
-          <div style={{ borderBottom: '1px solid var(--border)', padding: '0.9rem 1rem' }}>
-            <div style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '0.7rem' }}>Phéromones</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.56rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
-              <div style={{ width: '30px', height: '2px', background: 'repeating-linear-gradient(90deg,rgba(255,255,255,0.7) 0px,rgba(255,255,255,0.7) 4px,transparent 4px,transparent 8px)' }} />
-              Trace active — intensité forte
+          <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '1rem 1.2rem' }}>
+            <div style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: 'rgba(200,208,224,0.6)', textTransform: 'uppercase', marginBottom: '0.8rem', fontWeight: 700 }}>Phéromones</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', fontSize: '0.6rem', color: '#c8d0e0', marginBottom: '0.55rem' }}>
+              <div style={{ width: '30px', height: '2px', background: 'repeating-linear-gradient(90deg,rgba(255,255,255,0.8) 0px,rgba(255,255,255,0.8) 4px,transparent 4px,transparent 8px)', flexShrink: 0 }} />
+              Trace active
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.56rem', color: 'var(--text-dim)', opacity: 0.4 }}>
-              <div style={{ width: '30px', height: '2px', background: 'repeating-linear-gradient(90deg,rgba(255,255,255,0.7) 0px,rgba(255,255,255,0.7) 4px,transparent 4px,transparent 8px)' }} />
-              Trace en évaporation
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', fontSize: '0.6rem', color: 'rgba(200,208,224,0.4)', marginBottom: '0.55rem' }}>
+              <div style={{ width: '30px', height: '2px', background: 'repeating-linear-gradient(90deg,rgba(255,255,255,0.3) 0px,rgba(255,255,255,0.3) 4px,transparent 4px,transparent 8px)', flexShrink: 0 }} />
+              En évaporation
             </div>
           </div>
 
-          {/* Interactions log */}
-          <div style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'var(--text-dim)', textTransform: 'uppercase', padding: '0.7rem 1rem 0.3rem', borderTop: '1px solid var(--border)' }}>
+          {/* Traces log */}
+          <div style={{ fontSize: '0.52rem', letterSpacing: '0.14em', color: 'rgba(200,208,224,0.6)', textTransform: 'uppercase', padding: '0.8rem 1.2rem 0.4rem', fontWeight: 700 }}>
             Traces récentes
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
+          <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
             {traces.map(trace => {
               const agentType = trace.agents?.type || 'default'
               const color     = COLORS[agentType] || '#4ade80'
               return (
-                <div key={trace.id} style={{ padding: '0.55rem 1rem', borderBottom: '1px solid var(--border)', fontSize: '0.55rem', color: 'var(--text-dim)', lineHeight: 1.5, animation: 'fadeSlide 0.3s ease' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.15rem' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color }} />
-                    <span style={{ color, fontSize: '0.52rem', fontWeight: 700 }}>{trace.agents?.identite || agentType}</span>
+                <div key={trace.id} style={{ padding: '0.65rem 1.2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', animation: 'fadeSlide 0.3s ease' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, flexShrink: 0 }} />
+                    <span style={{ color, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.04em' }}>{trace.agents?.identite || agentType}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.48rem', color: 'rgba(200,208,224,0.35)', fontStyle: 'italic' }}>{trace.type}</span>
                   </div>
-                  <div style={{ fontSize: '0.5rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                    {trace.type}
-                  </div>
-                  <div style={{ marginTop: '0.1rem' }}>
-                    {trace.contenu.substring(0, 80)}{trace.contenu.length > 80 ? '…' : ''}
+                  <div style={{ fontSize: '0.57rem', color: '#a0aec0', lineHeight: 1.5, paddingLeft: '1.1rem' }}>
+                    {trace.contenu.substring(0, 90)}{trace.contenu.length > 90 ? '…' : ''}
                   </div>
                 </div>
               )
             })}
             {traces.length === 0 && (
-              <div style={{ padding: '1rem', fontSize: '0.55rem', color: 'var(--text-faint)', fontStyle: 'italic' }}>En attente du premier cycle…</div>
+              <div style={{ padding: '1.5rem 1.2rem', fontSize: '0.58rem', color: 'rgba(200,208,224,0.35)', fontStyle: 'italic' }}>En attente du premier cycle…</div>
             )}
           </div>
         </div>
