@@ -9,7 +9,7 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+major_version = 17
 
 [studio]
 port = 54323
@@ -24,7 +24,6 @@ file_size_limit = "50MiB"
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://ami-colony.vercel.app"]
 jwt_expiry = 3600
-refresh_token_rotation_enabled = true
 enable_signup = false
 
 [auth.email]

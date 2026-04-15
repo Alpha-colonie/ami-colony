@@ -41,3 +41,8 @@ serviceAccountKey.json
 
 # Fichier clés API local
 api colonie ami.txt
+
+# Scripts locaux avec secrets hardcodés
+scripts/setup_cron_hardcoded.sql
+scripts/seed_api_keys.sql
+scripts/check_*.sql
